@@ -101,16 +101,16 @@ function card(gr,n){const c=document.createElement('canvas');c.width=600;c.heigh
  x.font='20px sans-serif';x.fillText(DEVS,300,676);x.font='bold 22px sans-serif';x.fillText(GRADE,300,708);x.font='italic 22px sans-serif';x.fillText(EVENT,300,750);return c}
 function show(id){['edit','res','ph'].forEach(v=>$(v).hidden=v!==id)}
 $('bDone').onclick=()=>{cardCv=card(g,N);$('cardImg').src=cardCv.toDataURL('image/png');
- const base=(SITE_URL||location.href).split('#')[0];
- const url=base+'#d='+N+':'+g.join('');
+const base=(SITE_URL||location.href).split('#')[0].split('?')[0];
+const url=base+'?d='+N+':'+g.join('');
  try{const q=qrcode(0,N>16?'L':'M');q.addData(url);q.make();$('qr').innerHTML=q.createImgTag(4,4)}catch(e){$('qr').textContent='No se pudo generar el QR'}
  $('urlTxt').textContent=base;show('res')};
 $('bNew').onclick=()=>{init(N);show('edit')};
 $('bDl').onclick=()=>{cardCv.toBlob(async b=>{const f=new File([b],'mi-pixel-art.png',{type:'image/png'});
  try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}catch(e){}
  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mi-pixel-art.png';document.body.appendChild(a);a.click();a.remove()},'image/png')};
-function phone(d){const m=d.match(/^#d=(\d+):(.+)$/);if(!m)return false;const n=+m[1],gr=m[2].split('');if(gr.length!==n*n)return false;
+function phone(d){const m=d.match(/[?#&]d=(\d+):([0-9a-f.]+)/i);if(!m)return false;const n=+m[1],gr=m[2].split('');if(gr.length!==n*n)return false;
  cardCv=card(gr,n);$('cardImg2').src=cardCv.toDataURL('image/png');
  show('ph');return true}
-init(16);sel();if(!phone(location.hash))show('edit');
+init(16);sel();if(!phone(location.search+location.hash))show('edit');
 </script></body></html>
