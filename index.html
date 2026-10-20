@@ -20,8 +20,14 @@ button.main{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:7
 .pal i{aspect-ratio:1;border:2px solid var(--bd);border-radius:4px;cursor:pointer}
 .pal i.on{border-color:var(--fg);outline:2px solid var(--ac)}
 .center{text-align:center;max-width:460px;margin:0 auto}
-#cardImg{width:100%;max-width:420px;border-radius:8px;box-shadow:0 4px 18px #0004}
+#cardImg,#cardImg2{display:block;width:100%;max-width:420px;height:auto;margin:0 auto;border-radius:8px;box-shadow:0 4px 18px #0004}
+.center button.main{display:block;max-width:420px;margin:10px auto}
 #qr img{width:min(440px,100%);height:auto;image-rendering:pixelated;background:#fff;padding:8px;border-radius:8px}
+.duo{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;align-items:stretch;max-width:900px;margin:0 auto}
+.duo>img{align-self:flex-start}
+.qrbox{width:min(420px,100%);background:var(--card);border:2px solid var(--bd);border-radius:8px;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.qrbox h2{font-size:1.1rem;margin:0 0 12px}
+#qr{width:100%}
 .small{font-size:.8rem;opacity:.8;word-break:break-all}
 [hidden]{display:none!important}
 </style></head><body>
@@ -41,13 +47,18 @@ button.main{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:7
   </div>
  </div>
 </div>
-<div id="res" hidden><div class="center">
+<div id="res" hidden>
  <h1>¡Tu ficha de recuerdo!</h1>
- <img id="cardImg" alt="Ficha de recuerdo">
- <h2>📱 Escanea: se necesita internet para descargar la imagen</h2>
- <div id="qr"></div><p class="small" id="urlTxt"></p>
- <button class="main" id="bNew">🔄 Nuevo dibujo</button>
-</div></div>
+ <div class="duo">
+  <img id="cardImg" alt="Ficha de recuerdo">
+  <div class="qrbox">
+   <h2>📱 Escanea: se necesita internet para descargar la imagen</h2>
+   <div id="qr"></div>
+   <p class="small" id="urlTxt"></p>
+  </div>
+ </div>
+ <div class="center"><button class="main" id="bNew">🔄 Nuevo dibujo</button></div>
+</div>
 <div id="ph" hidden><div class="center">
  <h1>¡Tu pixel art!</h1>
  <img id="cardImg2" alt="Tu ficha">
@@ -81,7 +92,11 @@ fire:["........3.......",".......33.......",".......343...3..","......3443..33..
 flower:["......bbbb......","....bbbbbbbb....","...bbbb55bbbb...","...bbb5555bbb...","...bbb5555bbb...","...bbbb55bbbb...","....bbbbbbbb....","......bbbb......",".......66.......","..666..66.......","...666666.......",".......666666...",".......66.666...",".......66.......",".......66.......",".......66......."],
 potion:["......cccc......","......1221......","......1221......",".....122221.....","....11222211....","...1aaaaaaaa1...","..1aaaaaaaaaa1..","..1aa2aaaaaaa1..","..1aa2aaaaaaa1..","..1aaaaaaaaaa1..","..1aaaaaaaaaa1..","...1aaaaaaaa1...","....11111111....",E,E,E]};
 function init(n){N=n;g=Array(N*N).fill('.');draw()}
-function load(t){g=[];for(let y=0;y<N;y++)for(let x=0;x<N;x++)g.push(t[Math.floor(y*16/N)][Math.floor(x*16/N)]);draw()}
+function centerT(t){let x0=16,x1=-1,y0=16,y1=-1;
+ for(let y=0;y<16;y++)for(let x=0;x<16;x++)if(t[y][x]!=='.'){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+ const ox=Math.floor((16-(x1-x0+1))/2),oy=Math.floor((16-(y1-y0+1))/2);
+ return Array.from({length:16},(_,y)=>Array.from({length:16},(_,x)=>{const sx=x-ox+x0,sy=y-oy+y0;return sx>=x0&&sx<=x1&&sy>=y0&&sy<=y1?t[sy][sx]:'.'}).join(''))}
+function load(t){t=centerT(t);g=[];for(let y=0;y<N;y++)for(let x=0;x<N;x++)g.push(t[Math.floor(y*16/N)][Math.floor(x*16/N)]);draw()}
 function paint(ctx,size,gr,n,grid){const s=size/n;for(let y=0;y<n;y++)for(let x=0;x<n;x++){const c=gr[y*n+x];ctx.fillStyle=c==='.'?((x+y)%2?'#eeeeee':'#fafafa'):PAL[parseInt(c,16)];ctx.fillRect(x*s,y*s,s+.5,s+.5)}
  if(grid){ctx.strokeStyle='#0002';ctx.lineWidth=1;for(let i=1;i<n;i++){ctx.beginPath();ctx.moveTo(i*s,0);ctx.lineTo(i*s,size);ctx.moveTo(0,i*s);ctx.lineTo(size,i*s);ctx.stroke()}}}
 function draw(){paint($('cv').getContext('2d'),512,g,N,true)}
