@@ -29,8 +29,10 @@ button.main{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:7
 .qrbox h2{font-size:1.1rem;margin:0 0 12px}
 #qr{width:100%}
 .small{font-size:.8rem;opacity:.8;word-break:break-all}
+#counter{text-align:center;margin:0 auto 12px}
 [hidden]{display:none!important}
 </style></head><body>
+<p id="counter" class="small" role="status" aria-live="polite">Fichas generadas: cargando...</p>
 <div id="edit">
  <h1>🎨 Crea tu Pixel Art</h1>
  <div class="wrap">
@@ -73,10 +75,41 @@ const GRADE="10-02";
 // Pon aqui tu direccion de GitHub Pages, ej: "https://TU-USUARIO.github.io/NOMBRE-REPO/" (si la dejas vacia usa la direccion actual)
 const SITE_URL="https://yeshuarey.github.io/Pixel-Feria/";
 const EVENT="Feria de la Innocreatividad";
+const SUPABASE_URL="https://uprhnwpsllrfdrosdjyd.supabase.co/rest/v1/";
+const SUPABASE_ANON_KEY="sb_publishable_MH8ea_ma1WrYoNH0LFbQSQ_43USCm0Q";
 const PAL=['#00bcd4','#1b1b1b','#ffffff','#e53935','#fb8c00','#fdd835','#43a047','#1b5e20','#1e88e5','#4fc3f7','#8e24aa','#f48fb1','#6d4c41','#9e9e9e','#424242','#ffcc99'];
 const HX='0123456789abcdef';
 const $=id=>document.getElementById(id);
-let N=16,g=[],col='3',erase=false,down=false,cardCv=null;
+let N=16,g=[],col='3',erase=false,down=false,cardCv=null,counterVersion=0,totalFichas=null,currentCard=null;
+function setCounter(message){$('counter').textContent='Fichas generadas: '+message}
+function counterApi(path){return SUPABASE_URL.replace(/\/rest\/v1\/?$/,'').replace(/\/$/,'')+'/rest/v1/'+path}
+function refreshCard(){
+ if(!currentCard)return;
+ cardCv=card(currentCard.grid,currentCard.size,totalFichas);
+ const image=cardCv.toDataURL('image/png');
+ $('cardImg').src=image;
+ $('cardImg2').src=image;
+}
+async function loadCounter(){
+ const version=counterVersion;
+ try{
+  const response=await fetch(counterApi('fichas_counter?id=eq.1&select=total'),{headers:{apikey:SUPABASE_ANON_KEY}});
+  if(!response.ok)throw new Error('HTTP '+response.status);
+  const rows=await response.json();
+  if(!Array.isArray(rows)||!rows.length||!/^\d+$/.test(String(rows[0].total)))throw new Error('Respuesta inválida del contador');
+  if(version===counterVersion){totalFichas=BigInt(rows[0].total);setCounter(totalFichas.toLocaleString('es-CO'));refreshCard()}
+ }catch(error){if(version===counterVersion)setCounter('no disponible');console.error('No se pudo cargar el contador de fichas:',error)}
+}
+async function incrementCounter(){
+ const version=++counterVersion;
+ try{
+  const response=await fetch(counterApi('rpc/incrementar_fichas'),{method:'POST',headers:{apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'},body:'{}'});
+  if(!response.ok)throw new Error('HTTP '+response.status);
+  const total=await response.json();
+  if(!/^\d+$/.test(String(total)))throw new Error('Respuesta inválida del contador');
+  if(version===counterVersion){totalFichas=BigInt(total);setCounter(totalFichas.toLocaleString('es-CO'));refreshCard()}
+ }catch(error){if(version===counterVersion){totalFichas=null;setCounter('no disponible (no se pudo actualizar)');refreshCard()}console.error('No se pudo incrementar el contador de fichas:',error)}
+}
 function sword(){const a=Array.from({length:16},()=>Array(16).fill('.'));const s=(x,y,c)=>{if(x>=0&&y>=0&&x<16&&y<16)a[y][x]=c};
  for(let i=0;i<9;i++){s(14-i,1+i,'9');if(i)s(13-i,1+i,'8')}
  s(15,0,'2');for(let k=-2;k<=2;k++)s(5+k,10+k,'5');
@@ -109,23 +142,23 @@ $('bClr').onclick=()=>init(N);
 $('b16').onclick=()=>{$('b16').classList.add('on');$('b32').classList.remove('on');init(16)};
 $('b32').onclick=()=>{$('b32').classList.add('on');$('b16').classList.remove('on');init(32)};
 document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>load(T[b.dataset.t]));
-function card(gr,n){const c=document.createElement('canvas');c.width=600;c.height=800;const x=c.getContext('2d');
+function card(gr,n,total){const c=document.createElement('canvas');c.width=600;c.height=800;const x=c.getContext('2d');
  x.fillStyle='#fff8e7';x.fillRect(0,0,600,800);x.strokeStyle='#1b1b1b';x.lineWidth=10;x.strokeRect(15,15,570,770);x.lineWidth=3;x.strokeRect(30,30,540,740);
  x.save();x.translate(60,60);paint(x,480,gr,n,false);x.restore();x.lineWidth=6;x.strokeRect(60,60,480,480);
  x.fillStyle='#1b1b1b';x.textAlign='center';x.font='bold 24px sans-serif';x.fillText(SCHOOL[0],300,592);x.font='bold 26px sans-serif';x.fillText(SCHOOL[1],300,626);
- x.font='20px sans-serif';x.fillText(DEVS,300,676);x.font='bold 22px sans-serif';x.fillText(GRADE,300,708);x.font='italic 22px sans-serif';x.fillText(EVENT,300,750);return c}
+ x.font='20px sans-serif';x.fillText(DEVS,300,660);x.font='bold 22px sans-serif';x.fillText(GRADE,300,690);x.font='italic 22px sans-serif';x.fillText(EVENT,300,720);x.font='16px sans-serif';x.fillText('Fichas generadas: '+(total===null?'no disponible':total.toLocaleString('es-CO')),300,750);return c}
 function show(id){['edit','res','ph'].forEach(v=>$(v).hidden=v!==id)}
-$('bDone').onclick=()=>{cardCv=card(g,N);$('cardImg').src=cardCv.toDataURL('image/png');
+$('bDone').onclick=()=>{cardCv=card(g,N,totalFichas);$('cardImg').src=cardCv.toDataURL('image/png');
 const base=(SITE_URL||location.href).split('#')[0].split('?')[0];
 const url=base+'?d='+N+':'+g.join('');
  try{const q=qrcode(0,N>16?'L':'M');q.addData(url);q.make();$('qr').innerHTML=q.createImgTag(4,4)}catch(e){$('qr').textContent='No se pudo generar el QR'}
- $('urlTxt').textContent=base;show('res')};
-$('bNew').onclick=()=>{init(N);show('edit')};
+ $('urlTxt').textContent=base;currentCard={grid:g.slice(),size:N};refreshCard();show('res');incrementCounter()};
+$('bNew').onclick=()=>{currentCard=null;init(N);show('edit')};
 $('bDl').onclick=()=>{cardCv.toBlob(async b=>{const f=new File([b],'mi-pixel-art.png',{type:'image/png'});
  try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}catch(e){}
  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mi-pixel-art.png';document.body.appendChild(a);a.click();a.remove()},'image/png')};
 function phone(d){const m=d.match(/[?#&]d=(\d+):([0-9a-f.]+)/i);if(!m)return false;const n=+m[1],gr=m[2].split('');if(gr.length!==n*n)return false;
- cardCv=card(gr,n);$('cardImg2').src=cardCv.toDataURL('image/png');
+ currentCard={grid:gr,size:n};refreshCard();
  show('ph');return true}
-init(16);sel();if(!phone(location.search+location.hash))show('edit');
+init(16);sel();loadCounter();if(!phone(location.search+location.hash))show('edit');
 </script></body></html>
